@@ -1,3 +1,3 @@
-from src.report.generator import run
+from src.report.generator import print_details, run
 
-__all__ = ["run"]
+__all__ = ["run", "print_details"]

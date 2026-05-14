@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from src.market_data.fetcher import MarketDataResult
 from src.models import OptionCandidate
@@ -10,7 +11,9 @@ from src.valuation import blackscholes as bs
 logger = logging.getLogger(__name__)
 
 
-def run(cfg: dict, market: MarketDataResult, candidates: list[OptionCandidate]) -> list[OptionCandidate]:
+def run(
+    cfg: dict[str, Any], market: MarketDataResult, candidates: list[OptionCandidate]
+) -> list[OptionCandidate]:
     r = market.risk_free_rate
     spot = market.spot
     q: float = cfg["underlying"]["dividend_yield"]

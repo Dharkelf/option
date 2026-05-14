@@ -6,11 +6,11 @@ from scipy.stats import norm
 
 
 def _d1(S: float, K: float, T: float, r: float, sigma: float, q: float) -> float:
-    return (np.log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+    return float((np.log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T)))
 
 
 def _d2(S: float, K: float, T: float, r: float, sigma: float, q: float) -> float:
-    return _d1(S, K, T, r, sigma, q) - sigma * np.sqrt(T)
+    return float(_d1(S, K, T, r, sigma, q) - sigma * np.sqrt(T))
 
 
 def call_price(S: float, K: float, T: float, r: float, sigma: float, q: float = 0.0) -> float:
@@ -65,9 +65,13 @@ def theta_per_day(
     d2 = _d2(S, K, T, r, sigma, q)
     term = -np.exp(-q * T) * S * norm.pdf(d1) * sigma / (2.0 * np.sqrt(T))
     if option_type.lower() == "call":
-        annual = term - r * K * np.exp(-r * T) * norm.cdf(d2) + q * S * np.exp(-q * T) * norm.cdf(d1)
+        annual = (
+            term - r * K * np.exp(-r * T) * norm.cdf(d2) + q * S * np.exp(-q * T) * norm.cdf(d1)
+        )
     else:
-        annual = term + r * K * np.exp(-r * T) * norm.cdf(-d2) - q * S * np.exp(-q * T) * norm.cdf(-d1)
+        annual = (
+            term + r * K * np.exp(-r * T) * norm.cdf(-d2) - q * S * np.exp(-q * T) * norm.cdf(-d1)
+        )
     return float(annual / 365.0)
 
 

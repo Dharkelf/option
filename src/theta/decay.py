@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import pandas as pd
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 def build_decay_table(
     candidate: OptionCandidate,
     market: MarketDataResult,
-    cfg: dict,
+    cfg: dict[str, Any],
 ) -> pd.DataFrame:
     """
     Calculates option value at the current spot price for each week

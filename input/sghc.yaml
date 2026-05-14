@@ -9,7 +9,7 @@ dividend_yield: 0.025         # Jährliche Dividendenrendite (0.025 = 2.5%)
 option_type: "call"           # "call" oder "put"
 target_leverage: 4.0          # Gewünschter Hebel (Omega)
 
-investment_eur: 1000.0        # Geplante Investitionssumme in EUR (für Erlösschätzung)
+investment_eur: 400.0        # Geplante Investitionssumme in EUR (für Erlösschätzung)
 holding_months: 6             # Geplante Haltedauer in Monaten
 
 # Kurserwartung (optional — eines der beiden ausfüllen oder beide weglassen)

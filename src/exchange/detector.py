@@ -28,8 +28,8 @@ def _total_open_interest(ticker: str) -> int:
         for exp in expirations[:4]:  # check first 4 expirations only for speed
             try:
                 chain = t.option_chain(exp)
-                total += int((chain.calls["openInterest"].fillna(0).sum()
-                              + chain.puts["openInterest"].fillna(0).sum()))
+                total += int(chain.calls["openInterest"].fillna(0).sum()
+                              + chain.puts["openInterest"].fillna(0).sum())
             except Exception:
                 pass
         logger.debug("ticker %s total OI across 4 expirations: %d", ticker, total)

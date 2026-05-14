@@ -1,11 +1,12 @@
 """Repository pattern — all file-system paths derived from settings.yaml."""
 from pathlib import Path
+from typing import Any
 
 
 class PathRepository:
     """Single source of truth for all data file locations."""
 
-    def __init__(self, cfg: dict) -> None:
+    def __init__(self, cfg: dict[str, Any]) -> None:
         self._raw = Path(cfg["paths"]["raw_dir"])
         self._processed = Path(cfg["paths"]["processed_dir"])
 

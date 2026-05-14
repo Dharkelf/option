@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
+from typing import Any
 
 from src.scenarios.analyzer import CandidateAnalysis
 
@@ -33,12 +34,14 @@ class FlatexCostModel:
 
     def entry_cost_eur(self, option_mid_price: float) -> float:
         """Total EUR cost to enter one contract (100 shares) including fees and spread."""
-        notional_usd = option_mid_price * _SHARES_PER_CONTRACT * (1.0 + self._p.spread_buffer_pct / 100.0)
+        spread = 1.0 + self._p.spread_buffer_pct / 100.0
+        notional_usd = option_mid_price * _SHARES_PER_CONTRACT * spread
         return notional_usd / self._p.eur_usd_rate + self._p.fixed_per_trade_eur
 
     def exit_value_eur(self, option_exit_price: float) -> float:
         """EUR proceeds from selling one contract after fees and spread."""
-        notional_usd = option_exit_price * _SHARES_PER_CONTRACT * (1.0 - self._p.spread_buffer_pct / 100.0)
+        spread = 1.0 - self._p.spread_buffer_pct / 100.0
+        notional_usd = option_exit_price * _SHARES_PER_CONTRACT * spread
         return notional_usd / self._p.eur_usd_rate - self._p.fixed_per_trade_eur
 
     def net_pnl_eur(self, entry_price: float, exit_price: float) -> float:
@@ -62,7 +65,7 @@ class CostModelFactory:
     """Factory — constructs a FlatexCostModel from config."""
 
     @staticmethod
-    def from_config(cfg: dict) -> FlatexCostModel:
+    def from_config(cfg: dict[str, Any]) -> FlatexCostModel:
         c = cfg["costs"]
         params = CostParams(
             base_fee_eur=float(c["flatex_base_fee_eur"]),
@@ -74,7 +77,7 @@ class CostModelFactory:
         return FlatexCostModel(params)
 
 
-def run(cfg: dict, analyses: list[CandidateAnalysis]) -> list[CandidateAnalysis]:
+def run(cfg: dict[str, Any], analyses: list[CandidateAnalysis]) -> list[CandidateAnalysis]:
     """Fills all cost and P&L fields on each HorizonResult in-place."""
     model = CostModelFactory.from_config(cfg)
 

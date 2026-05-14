@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from typing import Any
 
 import pandas as pd
 
 from src.market_data.fetcher import MarketDataResult
-from src.models import OptionCandidate
 from src.scenarios.analyzer import CandidateAnalysis
 from src.utils.paths import PathRepository
 
@@ -15,13 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 def run(
-    cfg: dict,
+    cfg: dict[str, Any],
     market: MarketDataResult,
     analyses: list[CandidateAnalysis],
-    theta_tables: dict[str, pd.DataFrame],
-    sensitivity_grids: dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
-    """Prints full analysis to stdout and saves Parquet. Returns candidate summary DataFrame."""
+    """Prints candidate table (STEP 1) and saves Parquet. Returns candidate summary DataFrame."""
     if not analyses:
         logger.warning("keine Kandidaten zum Ausgeben")
         return pd.DataFrame()
@@ -31,8 +29,6 @@ def run(
 
     df = _build_summary_df(analyses, holding_months)
     _print_candidate_table(df, holding_months)
-    _print_theta_tables(theta_tables)
-    _print_sensitivity_grids(sensitivity_grids)
 
     paths = PathRepository(cfg)
     paths.ensure_dirs()
@@ -41,6 +37,15 @@ def run(
     logger.info("Ergebnisse gespeichert: %s", out)
 
     return df
+
+
+def print_details(
+    theta_tables: dict[str, pd.DataFrame],
+    sensitivity_grids: dict[str, pd.DataFrame],
+) -> None:
+    """Prints theta decay and sensitivity grids after the interactive checklist/recommendation."""
+    _print_theta_tables(theta_tables)
+    _print_sensitivity_grids(sensitivity_grids)
 
 
 def _build_summary_df(analyses: list[CandidateAnalysis], holding_months: int) -> pd.DataFrame:
@@ -133,8 +138,9 @@ def _print_sensitivity_grids(sensitivity_grids: dict[str, pd.DataFrame]) -> None
     for label, df in sensitivity_grids.items():
         print(f"\n  {label}")
         # Show value columns only to keep it readable
-        val_cols = [c for c in df.columns if c.startswith("wert_") or c in ("spot_usd", "aenderung_pct", "markierung")]
-        pnl_cols = [c for c in df.columns if c.startswith("pnl_") or c in ("spot_usd", "aenderung_pct", "markierung")]
+        common = {"spot_usd", "aenderung_pct", "markierung"}
+        val_cols = [c for c in df.columns if c.startswith("wert_") or c in common]
+        pnl_cols = [c for c in df.columns if c.startswith("pnl_") or c in common]
         print("  Optionswert in USD:")
         print(df[val_cols].to_string(index=False))
         print("\n  Netto-P&L in EUR (1 Kontrakt, inkl. Gebühren):")

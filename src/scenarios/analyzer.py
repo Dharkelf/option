@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from typing import Any
 
 from src.market_data.fetcher import MarketDataResult
 from src.models import OptionCandidate
@@ -43,7 +44,7 @@ class CandidateAnalysis:
 class ScenarioAnalyzer:
     """Template Method — analyse() is the fixed pipeline; _horizon_result() is variable."""
 
-    def __init__(self, market: MarketDataResult, cfg: dict) -> None:
+    def __init__(self, market: MarketDataResult, cfg: dict[str, Any]) -> None:
         self._market = market
         self._cfg = cfg
         self._horizons: list[int] = cfg["analysis"]["horizons_months"]
@@ -117,7 +118,7 @@ class ScenarioAnalyzer:
 
 
 def run(
-    cfg: dict, market: MarketDataResult, candidates: list[OptionCandidate]
+    cfg: dict[str, Any], market: MarketDataResult, candidates: list[OptionCandidate]
 ) -> tuple[list[CandidateAnalysis], float | None]:
     analyzer = ScenarioAnalyzer(market, cfg)
     return analyzer.analyse(candidates), analyzer.expected_price

@@ -27,7 +27,7 @@ dividend_yield: 0.01          # CATL zahlt geringe Dividende (~1%)
 option_type: "call"           # "call" oder "put"
 target_leverage: 4.0          # Gewünschter Hebel (Omega)
 
-investment_eur: 1000.0        # Geplante Investitionssumme in EUR
+investment_eur: 400.0        # Geplante Investitionssumme in EUR
 holding_months: 6             # Geplante Haltedauer in Monaten
 
 # Kurserwartung — bitte eigene Einschätzung eintragen (in HKD)

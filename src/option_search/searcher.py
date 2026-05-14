@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 from datetime import date
+from typing import Any
 
 import pandas as pd
 import yfinance as yf
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class OptionSearcher:
     """Repository + Strategy: fetches chain, applies leverage filter, returns candidates."""
 
-    def __init__(self, market: MarketDataResult, cfg: dict) -> None:
+    def __init__(self, market: MarketDataResult, cfg: dict[str, Any]) -> None:
         self._market = market
         self._cfg = cfg
         self._otype: str = cfg["option"]["type"].lower()
@@ -68,7 +68,9 @@ class OptionSearcher:
         seen: set[str] = set()
         selected: list[str] = []
         for target in targets:
-            target_naive = target.tz_localize(None) if target.tzinfo is None else target.tz_convert(None)
+            target_naive = (
+                target.tz_localize(None) if target.tzinfo is None else target.tz_convert(None)
+            )
             best = min(
                 expirations,
                 key=lambda e: abs((pd.Timestamp(e) - target_naive).days),
@@ -84,30 +86,47 @@ class OptionSearcher:
         spot = self._market.spot
         r = self._market.risk_free_rate
         q = self._div_yield
+        fallback_iv = self._market.implied_vol or self._market.realised_vol
+
+        # Vectorized pre-filtering
+        work = df.copy()
+        work["_oi"] = pd.to_numeric(  # type: ignore[call-overload]
+            work.get("openInterest"), errors="coerce"
+        ).fillna(0).astype(int)
+        work = work[work["_oi"] >= self._min_oi]
+        if work.empty:
+            return []
+
+        bid = pd.to_numeric(work.get("bid"), errors="coerce").fillna(0.0)  # type: ignore[call-overload]
+        ask = pd.to_numeric(work.get("ask"), errors="coerce").fillna(0.0)  # type: ignore[call-overload]
+        last = pd.to_numeric(work.get("lastPrice"), errors="coerce").fillna(0.0)  # type: ignore[call-overload]
+        work["_mid"] = ((bid + ask) / 2.0).where((bid > 0) & (ask > 0), last)
+        work = work[work["_mid"] > 0.0]
+        if work.empty:
+            return []
+
+        raw_iv = pd.to_numeric(work.get("impliedVolatility"), errors="coerce")  # type: ignore[call-overload]
+        iv_valid = raw_iv.notna() & (raw_iv > 0.01) & (raw_iv <= 5.0)
+        work["_iv"] = raw_iv.where(iv_valid, fallback_iv)
+
         results: list[OptionCandidate] = []
-
-        for _, row in df.iterrows():
+        for _, row in work.iterrows():
             strike = float(row["strike"])
-            oi = int(row.get("openInterest") or 0)
-            if oi < self._min_oi:
-                continue
+            iv = float(row["_iv"])
+            mid = float(row["_mid"])
+            oi = int(row["_oi"])
+            bid_val = float(bid.get(row.name, 0.0))
+            ask_val = float(ask.get(row.name, 0.0))
 
-            raw_iv = row.get("impliedVolatility")
-            iv_ok = raw_iv is not None and not pd.isna(raw_iv) and float(raw_iv) > 0.01
-            iv = float(raw_iv) if iv_ok else (self._market.implied_vol or self._market.realised_vol)
-            if iv > 5.0:
-                iv = self._market.realised_vol
-
-            bid = float(row.get("bid") or 0.0)
-            ask = float(row.get("ask") or 0.0)
-            mid = (bid + ask) / 2.0 if bid > 0 and ask > 0 else float(row.get("lastPrice") or 0.0)
-            if mid <= 0.0:
-                continue
-
-            # Quick omega estimate to pre-filter before full Greek calculation
             om = bs.omega(self._otype, spot, strike, T, r, iv, q)
             if abs(om - self._target_leverage) > self._tolerance:
                 continue
+
+            if self._otype == "call":
+                intrinsic = max(spot - strike, 0.0)
+            else:
+                intrinsic = max(strike - spot, 0.0)
+            stale = (bid_val == 0 and ask_val == 0) or (intrinsic > 0 and mid < intrinsic * 0.95)
 
             results.append(
                 OptionCandidate(
@@ -120,13 +139,14 @@ class OptionSearcher:
                     days_to_expiry=dte,
                     open_interest=oi,
                     volume=int(row.get("volume") or 0),
+                    stale_quote=stale,
                 )
             )
 
         return results
 
 
-def run(cfg: dict, market: MarketDataResult) -> list[OptionCandidate]:
+def run(cfg: dict[str, Any], market: MarketDataResult) -> list[OptionCandidate]:
     searcher = OptionSearcher(market, cfg)
     candidates = searcher.search()
     logger.info("total candidates before valuation: %d", len(candidates))

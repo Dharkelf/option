@@ -15,6 +15,7 @@ import src.scenarios as scenarios
 import src.valuation as valuation
 from src.exchange.detector import detect_best_ticker
 from src.interactive.workflow import print_recommendation, print_verification_checklist
+from src.report.generator import print_details
 from src.sensitivity.grid import build_sensitivity_grid
 from src.theta.decay import build_decay_table
 
@@ -74,6 +75,7 @@ def main() -> None:
 
     # Pipeline
     mkt = market_data.run(cfg)
+    cfg["costs"]["eur_usd_rate"] = mkt.eur_usd_rate
 
     candidates = option_search.run(cfg, mkt)
     if not candidates:
@@ -93,10 +95,11 @@ def main() -> None:
         theta_tables[label] = build_decay_table(c, mkt, cfg)
         sensitivity_grids[label] = build_sensitivity_grid(c, mkt, cfg, expected_price)
 
-    # Output
-    report.run(cfg, mkt, analyses, theta_tables, sensitivity_grids)
+    # Output: table → checklist → recommendation → theta/sensitivity
+    report.run(cfg, mkt, analyses)
     print_verification_checklist(candidates, mkt, cfg)
     print_recommendation(analyses, cfg, expected_price)
+    print_details(theta_tables, sensitivity_grids)
 
 
 if __name__ == "__main__":

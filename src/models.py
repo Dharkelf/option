@@ -1,7 +1,7 @@
 """Shared data models — no dependencies on other src modules (prevents circular imports)."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 
 
@@ -24,3 +24,4 @@ class OptionCandidate:
     vega_val: float = 0.0
     omega_val: float = 0.0
     breakeven: float = 0.0
+    stale_quote: bool = False

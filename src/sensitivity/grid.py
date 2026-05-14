@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import pandas as pd
 
@@ -17,7 +18,7 @@ _DEFAULT_PCT_CHANGES = [-0.40, -0.30, -0.20, -0.10, 0.0, 0.10, 0.20, 0.30, 0.40,
 def build_sensitivity_grid(
     candidate: OptionCandidate,
     market: MarketDataResult,
-    cfg: dict,
+    cfg: dict[str, Any],
     expected_price: float | None = None,
 ) -> pd.DataFrame:
     """
@@ -55,7 +56,7 @@ def build_sensitivity_grid(
     rows = []
     for s in spot_scenarios:
         tag = "ziel" if (expected_price is not None and abs(s - expected_price) < 0.01) else ""
-        row: dict = {
+        row: dict[str, object] = {
             "spot_usd": s,
             "aenderung_pct": round((s / spot - 1.0) * 100.0, 1),
             "markierung": tag,

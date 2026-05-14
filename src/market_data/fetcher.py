@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any, cast
 
 import pandas as pd
 import yfinance as yf
@@ -43,10 +44,11 @@ class YFinanceFetcher(MarketDataStrategy):
         )
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.droplevel(1)
-        if df.index.tz is None:
-            df.index = df.index.tz_localize("UTC")
+        idx = cast(pd.DatetimeIndex, df.index)
+        if idx.tz is None:
+            df.index = idx.tz_localize("UTC")
         else:
-            df.index = df.index.tz_convert("UTC")
+            df.index = idx.tz_convert("UTC")
         logger.info("fetched %d rows for %s", len(df), ticker)
         return df
 
@@ -71,11 +73,24 @@ class YFinanceFetcher(MarketDataStrategy):
         return rate
 
     def fetch_realised_vol(self, history: pd.DataFrame) -> float:
-        close = history["Close"].squeeze()
+        close = cast(pd.Series, history["Close"].squeeze())
         returns = close.pct_change().dropna()
         vol = float(returns.std() * (252**0.5))
         logger.info("realised vol (annualised) = %.4f", vol)
         return vol
+
+    def fetch_eur_usd(self) -> float:
+        """Fetches live EUR/USD rate from EURUSD=X. Falls back to 1.09 on failure."""
+        try:
+            info = yf.Ticker("EURUSD=X").fast_info
+            rate = float(info.last_price)
+            if 0.5 < rate < 3.0:
+                logger.info("EUR/USD live rate = %.4f", rate)
+                return rate
+        except (AttributeError, TypeError):
+            pass
+        logger.warning("EUR/USD rate unavailable — using fallback 1.09")
+        return 1.09
 
     def fetch_implied_vol(self, ticker: str, realised_vol: float = 0.40) -> float:
         """Approximates IV from nearest ATM option. Falls back to realised vol if unavailable."""
@@ -111,9 +126,10 @@ class MarketDataResult:
     realised_vol: float
     implied_vol: float
     risk_free_rate: float
+    eur_usd_rate: float = 1.09
 
 
-def run(cfg: dict) -> MarketDataResult:
+def run(cfg: dict[str, Any]) -> MarketDataResult:
     ticker: str = cfg["underlying"]["ticker"]
     lookback: int = cfg["analysis"]["lookback_years"]
     rf_ticker: str = cfg["analysis"]["risk_free_ticker"]
@@ -127,6 +143,7 @@ def run(cfg: dict) -> MarketDataResult:
     realised_vol = fetcher.fetch_realised_vol(history)
     implied_vol = fetcher.fetch_implied_vol(ticker, realised_vol)
     rf = fetcher.fetch_risk_free_rate(rf_ticker)
+    eur_usd = fetcher.fetch_eur_usd()
 
     raw_path = paths.raw_file(ticker.lower())
     if raw_path.exists():
@@ -146,4 +163,5 @@ def run(cfg: dict) -> MarketDataResult:
         realised_vol=realised_vol,
         implied_vol=implied_vol,
         risk_free_rate=rf,
+        eur_usd_rate=eur_usd,
     )

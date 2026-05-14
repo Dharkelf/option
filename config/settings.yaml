@@ -22,7 +22,7 @@ costs:
   flatex_exchange_fee_eur: 3.00     # Börsengebühr/Settlement pro Trade (EUR)
   spread_buffer_pct: 2.0            # Aufschlag auf Ask / Abschlag auf Bid (realistischer Fill)
   eur_usd_rate: 1.09                # EUR/USD-Kurs (manuell aktualisieren)
-  investment_eur: 1000.0            # Default-Investitionssumme (wird durch input/*.yaml überschrieben)
+  investment_eur: 400.0             # Default-Investitionssumme (wird durch input/*.yaml überschrieben)
 
 # --- Logging ---
 logging:

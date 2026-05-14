@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from typing import Any
 
+import pandas as pd
 import yfinance as yf
 
 from src.market_data.fetcher import MarketDataResult
@@ -22,11 +24,8 @@ def _fetch_earnings_dates(ticker: str) -> list[date]:
         cal = yf.Ticker(ticker).calendar
         if cal is None:
             return []
-        if isinstance(cal, dict):
-            raw = cal.get("Earnings Date", [])
-        else:
-            raw = []
-        return [pd.Timestamp(d).date() for d in raw if d]  # type: ignore[name-defined]
+        raw = cal.get("Earnings Date", []) if isinstance(cal, dict) else []
+        return [pd.Timestamp(d).date() for d in raw if d]
     except Exception:
         return []
 
@@ -34,7 +33,7 @@ def _fetch_earnings_dates(ticker: str) -> list[date]:
 def print_verification_checklist(
     candidates: list[OptionCandidate],
     market: MarketDataResult,
-    cfg: dict,
+    cfg: dict[str, Any],
 ) -> None:
     """Prints an actionable checklist of what the user must verify live before buying."""
     ticker = market.ticker
@@ -72,26 +71,28 @@ def print_verification_checklist(
         # Earnings warning per candidate
         for ed in sorted(earnings):
             if date.today() < ed <= c.expiration:
-                print(f"     *** EARNINGS {ed} LIEGT INNERHALB DER LAUFZEIT — IV-Crush möglich! ***")
+                print(  # noqa: E501
+                    f"     *** EARNINGS {ed} LIEGT INNERHALB DER LAUFZEIT — IV-Crush möglich! ***"
+                )
 
-        print(f"\n     1. Yahoo Finance Options:")
+        print("\n     1. Yahoo Finance Options:")
         print(f"        https://finance.yahoo.com/quote/{ticker}/options")
         print(f"        → Verfall '{c.expiration}' wählen → Strike {c.strike:.2f}")
         print(f"        Live Ask:       _______ USD   (Modell: {c.market_price:.2f})")
-        print(f"        Live Bid:       _______ USD")
+        print("        Live Bid:       _______ USD")
         print(f"        Open Interest:  _______       (Modell: {c.open_interest:,})")
         if c.open_interest < 100:
-            print(f"        *** WARNUNG: Geringer OI — nur mit strikter Limit-Order handeln! ***")
+            print("        *** WARNUNG: Geringer OI — nur mit strikter Limit-Order handeln! ***")
         print(f"        Live IV:        _______ %     (Modell: {c.implied_vol * 100:.0f}%)")
 
-        print(f"\n     2. flatex-Terminal:")
+        print("\n     2. flatex-Terminal:")
         print(f"        → Suche '{ticker}' → Optionen → {c.expiration} → Strike {c.strike:.2f}")
-        print(f"        → Ask-Kurs notieren. IMMER Limit-Order, niemals Market!")
+        print("        → Ask-Kurs notieren. IMMER Limit-Order, niemals Market!")
         print(f"        → 1 Kontrakt = 100 Aktien → Investition ≈ "
               f"{c.market_price * 100 / cfg['costs']['eur_usd_rate']:.0f} EUR Prämie + Gebühren")
 
-        print(f"\n     3. Eigener Hebel-Check (mit Live-Ask):")
-        print(f"        Omega = Delta × Spot / Live-Ask")
+        print("\n     3. Eigener Hebel-Check (mit Live-Ask):")
+        print("        Omega = Delta × Spot / Live-Ask")
         print(f"              = {c.delta_val:.3f} × {spot:.2f} / Live-Ask")
         print(f"        Beispiel bei Ask={c.market_price:.2f}: Omega = {c.omega_val:.1f}x")
 
@@ -104,7 +105,7 @@ def print_verification_checklist(
 
 def print_recommendation(
     analyses: list[CandidateAnalysis],
-    cfg: dict,
+    cfg: dict[str, Any],
     expected_price: float | None,
 ) -> None:
     """Prints the top-ranked candidate with full investment rationale."""
@@ -163,10 +164,8 @@ def print_recommendation(
 
 
 def _within_holding(earnings_date: date, holding_months: int) -> bool:
-    from datetime import date as dt, timedelta
-
-    horizon = dt.today().replace(day=1)
-    # rough approximation: holding_months * 30 days
+    from datetime import date as dt
     from datetime import timedelta
+
     cutoff = dt.today() + timedelta(days=holding_months * 30)
     return dt.today() < earnings_date <= cutoff
