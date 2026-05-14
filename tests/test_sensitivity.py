@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from src.market_data.fetcher import MarketDataResult
-from src.option_search.searcher import OptionCandidate
+from src.models import OptionCandidate
 from src.sensitivity.grid import build_sensitivity_grid
 
 

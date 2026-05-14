@@ -9,30 +9,10 @@ import pandas as pd
 import yfinance as yf
 
 from src.market_data.fetcher import MarketDataResult
+from src.models import OptionCandidate
 from src.valuation import blackscholes as bs
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class OptionCandidate:
-    ticker: str
-    expiration: date
-    strike: float
-    option_type: str
-    market_price: float
-    implied_vol: float
-    days_to_expiry: int
-    open_interest: int
-    volume: int
-    # filled by valuation.pricer.run()
-    bs_price: float = 0.0
-    delta_val: float = 0.0
-    gamma_val: float = 0.0
-    theta_day: float = 0.0
-    vega_val: float = 0.0
-    omega_val: float = 0.0
-    breakeven: float = 0.0
 
 
 class OptionSearcher:
@@ -88,7 +68,11 @@ class OptionSearcher:
         seen: set[str] = set()
         selected: list[str] = []
         for target in targets:
-            best = min(expirations, key=lambda e: abs((pd.Timestamp(e) - target).days))
+            target_naive = target.tz_localize(None) if target.tzinfo is None else target.tz_convert(None)
+            best = min(
+                expirations,
+                key=lambda e: abs((pd.Timestamp(e) - target_naive).days),
+            )
             if best not in seen:
                 selected.append(best)
                 seen.add(best)
@@ -108,8 +92,10 @@ class OptionSearcher:
             if oi < self._min_oi:
                 continue
 
-            iv = float(row.get("impliedVolatility") or self._market.implied_vol)
-            if iv <= 0.0 or iv > 5.0:
+            raw_iv = row.get("impliedVolatility")
+            iv_ok = raw_iv is not None and not pd.isna(raw_iv) and float(raw_iv) > 0.01
+            iv = float(raw_iv) if iv_ok else (self._market.implied_vol or self._market.realised_vol)
+            if iv > 5.0:
                 iv = self._market.realised_vol
 
             bid = float(row.get("bid") or 0.0)

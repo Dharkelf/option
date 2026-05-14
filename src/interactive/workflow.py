@@ -7,7 +7,7 @@ from datetime import date
 import yfinance as yf
 
 from src.market_data.fetcher import MarketDataResult
-from src.option_search.searcher import OptionCandidate
+from src.models import OptionCandidate
 from src.scenarios.analyzer import CandidateAnalysis
 
 logger = logging.getLogger(__name__)

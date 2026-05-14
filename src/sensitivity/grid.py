@@ -6,7 +6,7 @@ import logging
 import pandas as pd
 
 from src.market_data.fetcher import MarketDataResult
-from src.option_search.searcher import OptionCandidate
+from src.models import OptionCandidate
 from src.valuation import blackscholes as bs
 
 logger = logging.getLogger(__name__)

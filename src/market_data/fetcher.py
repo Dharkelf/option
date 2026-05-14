@@ -77,24 +77,30 @@ class YFinanceFetcher(MarketDataStrategy):
         logger.info("realised vol (annualised) = %.4f", vol)
         return vol
 
-    def fetch_implied_vol(self, ticker: str) -> float:
-        """Approximates IV from the nearest ATM option on the nearest expiration."""
+    def fetch_implied_vol(self, ticker: str, realised_vol: float = 0.40) -> float:
+        """Approximates IV from nearest ATM option. Falls back to realised vol if unavailable."""
         t = yf.Ticker(ticker)
         expirations = t.options
         if not expirations:
-            logger.warning("no option chain for %s — IV fallback 0.40", ticker)
-            return 0.40
-        chain = t.option_chain(expirations[0])
-        spot = self.fetch_spot(ticker)
-        calls = chain.calls
-        atm = calls.iloc[(calls["strike"] - spot).abs().argsort()[:1]]
-        try:
-            iv = float(atm["impliedVolatility"].iloc[0])
-        except (IndexError, KeyError, ValueError):
-            iv = 0.40
-            logger.warning("IV lookup failed — fallback 0.40")
-        logger.info("implied vol for %s = %.4f", ticker, iv)
-        return iv
+            logger.warning("no option chain for %s — using realised vol %.4f", ticker, realised_vol)
+            return realised_vol
+        # Try first 3 expirations to find a valid IV
+        for exp in expirations[:3]:
+            try:
+                chain = t.option_chain(exp)
+                spot = self.fetch_spot(ticker)
+                calls = chain.calls[chain.calls["impliedVolatility"] > 0.01]
+                if calls.empty:
+                    continue
+                atm = calls.iloc[(calls["strike"] - spot).abs().argsort()[:1]]
+                iv = float(atm["impliedVolatility"].iloc[0])
+                if iv > 0.01:
+                    logger.info("implied vol for %s = %.4f (from %s)", ticker, iv, exp)
+                    return iv
+            except Exception:
+                continue
+        logger.warning("IV lookup failed for %s — using realised vol %.4f", ticker, realised_vol)
+        return realised_vol
 
 
 @dataclass
@@ -119,7 +125,7 @@ def run(cfg: dict) -> MarketDataResult:
     history = fetcher.fetch_history(ticker, lookback)
     spot = fetcher.fetch_spot(ticker)
     realised_vol = fetcher.fetch_realised_vol(history)
-    implied_vol = fetcher.fetch_implied_vol(ticker)
+    implied_vol = fetcher.fetch_implied_vol(ticker, realised_vol)
     rf = fetcher.fetch_risk_free_rate(rf_ticker)
 
     raw_path = paths.raw_file(ticker.lower())

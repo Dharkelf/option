@@ -6,7 +6,7 @@ import logging
 import pandas as pd
 
 from src.market_data.fetcher import MarketDataResult
-from src.option_search.searcher import OptionCandidate
+from src.models import OptionCandidate
 from src.valuation import blackscholes as bs
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,9 @@ def build_decay_table(
     holding_months: int = cfg["analysis"]["holding_months"]
     max_days = min(candidate.days_to_expiry, int(holding_months * 30.44))
 
-    entry_price = candidate.market_price
+    # Use BS price at t=0 as the decay reference — not the market price,
+    # because market price may differ from BS price for illiquid strikes.
+    ref_price = bs.price(otype, spot, K, candidate.days_to_expiry / 365.0, r, iv, q)
     today = pd.Timestamp.now(tz="UTC")
 
     rows = []
@@ -40,8 +42,8 @@ def build_decay_table(
         days_remaining = candidate.days_to_expiry - days_elapsed
         T = max(days_remaining / 365.0, 0.0)
         val = bs.price(otype, spot, K, T, r, iv, q)
-        decay_usd = entry_price - val
-        decay_pct = decay_usd / entry_price * 100.0 if entry_price > 0.0 else 0.0
+        decay_usd = ref_price - val
+        decay_pct = decay_usd / ref_price * 100.0 if ref_price > 0.0 else 0.0
 
         rows.append(
             {
