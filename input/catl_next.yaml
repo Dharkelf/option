@@ -25,11 +25,11 @@ ticker: "3750.HK"             # HKEX — liquideste CATL Option Chain
 dividend_yield: 0.01          # CATL zahlt geringe Dividende (~1%)
 
 option_type: "call"           # "call" oder "put"
-target_leverage: 4.0          # Gewünschter Hebel (Omega)
+target_leverage: 5.0          # Gewünschter Hebel (Omega)
 
 investment_eur: 400.0        # Geplante Investitionssumme in EUR
 holding_months: 6             # Geplante Haltedauer in Monaten
 
 # Kurserwartung — bitte eigene Einschätzung eintragen (in HKD)
-expected_price: null          # z.B. 250.0 für 250 HKD Kursziel
+expected_price: 800         # z.B. 250.0 für 250 HKD Kursziel
 # expected_change_pct: 25.0   # Alternativ: erwartete Kursveränderung in %
