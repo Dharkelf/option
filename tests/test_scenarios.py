@@ -24,12 +24,13 @@ def make_candidate(dte: int = 180) -> OptionCandidate:
     )
 
 
-def test_horizons_count(market_result: MarketDataResult, base_cfg: dict) -> None:
+def test_horizons_include_holding_months(market_result: MarketDataResult, base_cfg: dict) -> None:
     analyzer = ScenarioAnalyzer(market_result, base_cfg)
     c = make_candidate()
     results = analyzer.analyse([c])
     assert len(results) == 1
-    assert len(results[0].horizons) == 3
+    months = {h.months for h in results[0].horizons}
+    assert base_cfg["analysis"]["holding_months"] in months
 
 
 def test_target_price_higher_gives_higher_call_value(
@@ -47,9 +48,23 @@ def test_expired_option_has_only_intrinsic(
     market_result: MarketDataResult, base_cfg: dict
 ) -> None:
     analyzer = ScenarioAnalyzer(market_result, base_cfg)
-    c = make_candidate(dte=90)  # expires before 6m horizon -> T_remaining = 0
+    c = make_candidate(dte=60)  # expires before 12m horizon -> T_remaining = 0
     results = analyzer.analyse([c])
     h12 = next(h for h in results[0].horizons if h.months == 12)
-    # After expiry, value = max(spot_target - K, 0)
-    expected = max(base_cfg["scenario"]["price_12m"] - c.strike, 0.0)
+    expected = max(base_cfg["scenario"]["expected_price"] - c.strike, 0.0)
     assert h12.option_value_target == pytest.approx(expected, abs=0.01)
+
+
+def test_expected_price_via_pct(market_result: MarketDataResult, base_cfg: dict) -> None:
+    cfg = dict(base_cfg)
+    cfg["scenario"] = {"expected_price": None, "expected_change_pct": 30.0, "flat_price": None}
+    analyzer = ScenarioAnalyzer(market_result, cfg)
+    expected = market_result.spot * 1.30
+    assert analyzer.expected_price == pytest.approx(expected, rel=1e-6)
+
+
+def test_run_returns_tuple(market_result: MarketDataResult, base_cfg: dict) -> None:
+    from src.scenarios.analyzer import run
+    result = run(base_cfg, market_result, [make_candidate()])
+    assert isinstance(result, tuple)
+    assert len(result) == 2

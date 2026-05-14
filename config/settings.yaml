@@ -1,51 +1,34 @@
 # ============================================================
-# Option Analysis Tool — Runtime Configuration
-# All tunable parameters live here. No hard-coded values in src/.
+# Technische Konfiguration — settings.yaml
+# Nutzerspezifische Eingaben gehören in input/<name>.yaml
 # ============================================================
 
-# --- Underlying asset ---
-underlying:
-  ticker: "SGHC"              # Yahoo Finance / CBOE ticker
-  dividend_yield: 0.025       # Annual dividend yield (decimal, e.g. 0.025 = 2.5%)
-
-# --- Option search parameters ---
+# --- Optionssuche (technische Schranken) ---
 option:
-  type: "call"                # "call" or "put"
-  target_leverage: 4.0        # Desired Omega (effective leverage)
-  leverage_tolerance: 1.5     # Accept candidates where |omega - target| <= tolerance
-  min_open_interest: 50       # Skip strikes with OI below this (liquidity guard)
-  max_candidates: 10          # Max candidates to return per expiration
+  leverage_tolerance: 1.5     # Akzeptierte Abweichung vom Ziel-Omega
+  min_open_interest: 50       # Liquidiäts-Minimum (Strikes darunter werden ignoriert)
+  max_candidates: 10          # Max. Kandidaten pro Verfallsdatum
 
-# --- User's personal price scenario ---
-# Set these to your own price targets for the underlying.
-# The tool will compute the option value at each horizon under these prices.
-# Set flat_price to null to use the live spot price as the "flat" scenario.
-scenario:
-  price_3m: 15.50             # Your estimated underlying price in 3 months (USD)
-  price_6m: 17.00             # Your estimated underlying price in 6 months (USD)
-  price_12m: 20.00            # Your estimated underlying price in 12 months (USD)
-  flat_price: null            # "nothing happens" price; null = use current spot
-
-# --- Analysis parameters ---
+# --- Analyseparameter ---
 analysis:
-  horizons_months: [3, 6, 12]
-  lookback_years: 1           # Historical window for realised volatility calculation
-  risk_free_ticker: "^TNX"    # 10yr US treasury yield (Yahoo Finance)
+  horizons_months: [3, 6, 12] # Standard-Horizonte für Tabellen und Sensitivitätsgrid
+  lookback_years: 1           # Historisches Fenster für realisierte Volatilität
+  risk_free_ticker: "^TNX"    # 10-Jahres-US-Staatsanleihenrendite (Yahoo Finance)
 
-# --- flatex.at transaction costs ---
-# Source: https://www.flatex.at/konditionen/ (verify before use)
+# --- flatex.at Transaktionskosten ---
+# Quelle: https://www.flatex.at/konditionen/ (vor Kauf prüfen!)
 costs:
-  flatex_base_fee_eur: 5.90         # Base commission per trade (EUR)
-  flatex_exchange_fee_eur: 3.00     # Exchange/settlement fee per trade (EUR)
-  spread_buffer_pct: 2.0            # Add X% to option ask price for realistic fill
-  eur_usd_rate: 1.09                # EUR/USD for cost conversion (update manually)
-  contracts: 1                      # Number of contracts to model (1 contract = 100 shares)
+  flatex_base_fee_eur: 5.90         # Grundgebühr pro Trade (EUR)
+  flatex_exchange_fee_eur: 3.00     # Börsengebühr/Settlement pro Trade (EUR)
+  spread_buffer_pct: 2.0            # Aufschlag auf Ask / Abschlag auf Bid (realistischer Fill)
+  eur_usd_rate: 1.09                # EUR/USD-Kurs (manuell aktualisieren)
+  investment_eur: 1000.0            # Default-Investitionssumme (wird durch input/*.yaml überschrieben)
 
 # --- Logging ---
 logging:
   level: "INFO"               # DEBUG | INFO | WARNING | ERROR
 
-# --- Storage paths ---
+# --- Datenpfade ---
 paths:
   data_dir: "data"
   raw_dir: "data/raw"

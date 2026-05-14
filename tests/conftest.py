@@ -1,6 +1,7 @@
 """Shared fixtures for all tests."""
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -9,11 +10,12 @@ from src.market_data.fetcher import MarketDataResult
 
 @pytest.fixture()
 def sample_history() -> pd.DataFrame:
-    idx = pd.date_range("2025-01-02", periods=252, freq="B", tz="UTC")
-    import numpy as np
     rng = np.random.default_rng(42)
+    idx = pd.date_range("2025-01-02", periods=252, freq="B", tz="UTC")
     prices = 10.0 * (1 + rng.normal(0.0005, 0.02, len(idx))).cumprod()
-    return pd.DataFrame({"Close": prices, "Open": prices, "High": prices, "Low": prices}, index=idx)
+    return pd.DataFrame(
+        {"Close": prices, "Open": prices, "High": prices, "Low": prices}, index=idx
+    )
 
 
 @pytest.fixture()
@@ -40,13 +42,13 @@ def base_cfg() -> dict:
             "max_candidates": 10,
         },
         "scenario": {
-            "price_3m": 15.50,
-            "price_6m": 17.00,
-            "price_12m": 20.00,
+            "expected_price": 17.00,
+            "expected_change_pct": None,
             "flat_price": 13.10,
         },
         "analysis": {
             "horizons_months": [3, 6, 12],
+            "holding_months": 6,
             "lookback_years": 1,
             "risk_free_ticker": "^TNX",
         },
@@ -55,7 +57,7 @@ def base_cfg() -> dict:
             "flatex_exchange_fee_eur": 3.00,
             "spread_buffer_pct": 2.0,
             "eur_usd_rate": 1.09,
-            "contracts": 1,
+            "investment_eur": 1000.0,
         },
         "logging": {"level": "DEBUG"},
         "paths": {"data_dir": "data", "raw_dir": "data/raw", "processed_dir": "data/processed"},

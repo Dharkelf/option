@@ -76,9 +76,13 @@ explicitly per config.
 | market_data | `src/market_data/` | yfinance: 1yr history, spot, realised vol, 10yr treasury yield |
 | option_search | `src/option_search/` | CBOE option chain, leverage filter (omega), candidate ranking |
 | valuation | `src/valuation/` | Black-Scholes pricing, Delta/Gamma/Theta/Vega/Omega |
-| scenarios | `src/scenarios/` | Project option value at 3/6/12m given user price estimates |
-| costs | `src/costs/` | flatex fee model: base fee + exchange fee + spread estimate |
-| report | `src/report/` | Console table + Parquet export of all candidates x horizons |
+| scenarios | `src/scenarios/` | Project option value at horizons given user price estimate (linear interp.) |
+| costs | `src/costs/` | flatex fee model; investment_eur -> affordable contracts; total P&L |
+| theta | `src/theta/` | Weekly theta decay table (flat spot) from today to holding_months |
+| sensitivity | `src/sensitivity/` | Spot x time P&L grid — option value at spot scenarios x time points |
+| interactive | `src/interactive/` | Live-verification checklist + product recommendation printout |
+| exchange | `src/exchange/` | Multi-ticker liquidity detection for non-US stocks (e.g. CATL) |
+| report | `src/report/` | Candidate table + theta + sensitivity grid + Parquet export |
 | utils | `src/utils/` | PathRepository — all file-system paths derived from settings.yaml |
 
 ---
@@ -178,12 +182,45 @@ Agents MUST NOT:
 
 ---
 
+## Input File Convention
+
+User-facing parameters live in `input/<name>.yaml`, not in `config/settings.yaml`.
+`config/settings.yaml` contains only technical / fee parameters that rarely change.
+
+Required fields in an input file:
+```yaml
+ticker: "SGHC"
+dividend_yield: 0.025
+option_type: "call"
+target_leverage: 4.0
+investment_eur: 1000.0
+holding_months: 6
+expected_price: 17.00     # optional — or use expected_change_pct
+```
+
+Run: `python main.py --input input/sghc.yaml`
+
+---
+
+## Output Structure
+
+The tool produces output in this order:
+1. Candidate table ranked by expected P&L at `holding_months`
+2. Theta decay table (flat spot) for top 3 candidates
+3. Sensitivity grid (spot x time) for top 3 candidates
+4. Live-verification checklist (what to look up in flatex / Yahoo Finance)
+5. Product recommendation with full rationale
+
+---
+
 ## End Goal
 
 A self-contained CLI tool that:
-1. Fetches the current option chain for any user-specified underlying from CBOE via yfinance.
-2. Filters to candidates matching the target leverage (Omega).
-3. Given the user's own price estimates for 3, 6, and 12 months, computes the expected option
-   value at each horizon using Black-Scholes with realised volatility.
-4. Deducts flatex.at transaction costs to show net P&L per candidate.
-5. Exports results as a Parquet file and prints a ranked summary table.
+1. Reads a plain-text input file (ticker, type, leverage, investment, holding, price target).
+2. Fetches the CBOE option chain for the underlying via yfinance.
+3. Filters candidates by target leverage (Omega).
+4. Computes Black-Scholes value, Greeks, theta decay, and P&L sensitivity grid.
+5. Deducts flatex.at transaction costs; computes affordable contracts from investment_eur.
+6. Prints an actionable checklist of what to verify live in flatex / Yahoo Finance.
+7. Recommends the best product with full investment rationale.
+8. Exports a Parquet file with all results.

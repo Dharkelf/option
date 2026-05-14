@@ -1,0 +1,35 @@
+# ============================================================
+# Eingabedatei — CATL Option Analyse
+# Zum Kopieren aus dieser Datei und Anpassen:
+#   cp input/catl_next.yaml input/catl.yaml
+#   python main.py --input input/catl.yaml
+# ============================================================
+#
+# CATL (Contemporary Amperex Technology Co.) — Batteriehersteller
+#
+# Börsenwahl nach Liquidität:
+#   3750.HK  — HKEX Hong Kong (beste Optionsliquidität für CATL)
+#   300750.SZ — Shenzhen A-Share (kein yfinance-Optionszugang)
+#   CAT1.DE  — Xetra (wahrscheinlich keine Options Chain)
+#
+# Das Tool prüft automatisch, welcher Ticker eine Option Chain hat
+# und wählt den liquidesten (Summe Open Interest).
+# Starte mit 3750.HK — falls keine Chain gefunden wird, im Tool-Output
+# steht die Empfehlung für den nächsten Versuch.
+#
+# Hinweis Währung: HKEX-Optionen notieren in HKD.
+# EUR/USD-Rate in config/settings.yaml durch EUR/HKD ersetzen falls nötig.
+# ============================================================
+
+ticker: "3750.HK"             # HKEX — liquideste CATL Option Chain
+dividend_yield: 0.01          # CATL zahlt geringe Dividende (~1%)
+
+option_type: "call"           # "call" oder "put"
+target_leverage: 4.0          # Gewünschter Hebel (Omega)
+
+investment_eur: 1000.0        # Geplante Investitionssumme in EUR
+holding_months: 6             # Geplante Haltedauer in Monaten
+
+# Kurserwartung — bitte eigene Einschätzung eintragen (in HKD)
+expected_price: null          # z.B. 250.0 für 250 HKD Kursziel
+# expected_change_pct: 25.0   # Alternativ: erwartete Kursveränderung in %
